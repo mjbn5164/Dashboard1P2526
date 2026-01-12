@@ -1,0 +1,61 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #020617;
+  --foreground: #e2e8f0;
+}
+
+body {
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+  color: var(--foreground);
+}
+
+.font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+.neon-text-cyan {
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.8), 0 0 20px rgba(34, 211, 238, 0.3);
+  color: #22d3ee;
+}
+
+.neon-text-magenta {
+  text-shadow: 0 0 10px rgba(217, 70, 239, 0.8), 0 0 25px rgba(217, 70, 239, 0.3);
+  color: #e879f9;
+}
+
+.neon-text-redondo-magenta {
+  text-shadow: 0 0 12px rgba(255, 0, 255, 0.9), 0 0 30px rgba(255, 0, 255, 0.4);
+  color: #ff00ff;
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.grade-glow {
+  text-shadow: 0 0 13px currentColor, 0 0 20px currentColor;
+  filter: brightness(1.85);
+  transition: all 0.3s ease;
+}
+
+tr:hover .grade-glow {
+  text-shadow: 0 0 22px currentColor, 0 0 40px currentColor;
+  filter: brightness(2.13);
+}
+
+@keyframes neon-pulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
+
+.animate-pulse-slow {
+  animation: neon-pulse 2s infinite alternate;
+}

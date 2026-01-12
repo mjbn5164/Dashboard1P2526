@@ -1,0 +1,44 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependências
+node_modules
+
+# Next.js (ESSENCIAL para o seu projeto)
+.next
+out
+build
+
+# Variáveis de Ambiente e Segredos (MUITO IMPORTANTE)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+
+# Bloquear a chave JSON da Google
+# Isto garante que o ficheiro que você baixou não vai para a internet
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!jsconfig.json
+!next.config.json
+!.vscode/extensions.json
+
+# Editor directories and files
+.vscode/*
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
