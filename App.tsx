@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, LabelList, PieChart, Pie, Cell as PieCell
 } from 'recharts';
-import { 
+import {
   Home,
   Table as TableIcon,
   BookOpen,
@@ -30,26 +30,26 @@ import {
 import { StudentData, SubjectStats, GradeDistribution, SheetInfo } from './types';
 import { extractDataFromSheetsText } from './services/geminiService';
 
-const MASTER_API_KEY = "AIzaSyCJG66RHmLgC68ykM6Pqeoh7MflsOaL_wU";
+const MASTER_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 const formatDecimal = (val: number | string): string => {
   const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val;
   if (isNaN(num)) return String(val);
-  return num.toLocaleString('pt-PT', { 
-    minimumFractionDigits: 0, 
-    maximumFractionDigits: 1 
+  return num.toLocaleString('pt-PT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
   });
 };
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const value = payload[0].value; 
+    const value = payload[0].value;
     const dataKey = payload[0].dataKey;
     const name = data.subject || data.range || data.name || data.subjectName;
     const unit = dataKey === 'percentageBelowTen' || dataKey === 'percentagePositive' ? '%' : '';
     const color = payload[0].color || data.color || '#f43f5e';
-    
+
     return (
       <div className="glass-panel p-4 border-2 border-white/20 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] min-w-[140px]">
         <p className="text-[12px] font-black uppercase tracking-widest mb-1" style={{ color }}>{name}</p>
@@ -66,19 +66,19 @@ const CustomBarLabel = (props: any) => {
   const { x, y, width, height, payload, fontSize, valueKey } = props;
   const value = payload?.[valueKey || 'count'];
   if (value === undefined || value === 0) return null;
-  
+
   const isNegative = payload.chartValue < 0;
   const labelY = isNegative ? y + height + 20 : y - 12;
   const displayValue = Math.abs(value);
   const suffix = valueKey === 'percentageBelowTen' ? '%' : '';
-  
+
   return (
-    <text 
-      x={x + width / 2} 
-      y={labelY} 
-      fill="#FFFFFF" 
-      textAnchor="middle" 
-      fontSize={fontSize || 12} 
+    <text
+      x={x + width / 2}
+      y={labelY}
+      fill="#FFFFFF"
+      textAnchor="middle"
+      fontSize={fontSize || 12}
       fontWeight="900"
       className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
     >
@@ -90,18 +90,18 @@ const CustomBarLabel = (props: any) => {
 const SubjectCardContent: React.FC<{ s: SubjectStats, isFocused?: boolean, onExpand?: () => void, isQualitative: boolean }> = ({ s, isFocused, onExpand, isQualitative }) => (
   <div className={`flex flex-col h-full transition-all duration-500 relative`}>
     {!isFocused && (
-      <button 
+      <button
         onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
         className="absolute top-1 right-1 p-2 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-all z-10"
       >
         <Maximize size={16} />
       </button>
     )}
-    
+
     <div className="flex justify-between items-start mb-6">
       <h4 className={`font-bold font-orbitron text-white uppercase tracking-tight transition-all duration-500 ${isFocused ? 'neon-text-cyan text-5xl' : 'text-xl'}`}>{s.subject}</h4>
     </div>
-    
+
     <div className={`grid ${isFocused ? (isQualitative ? 'grid-cols-2' : 'grid-cols-3') + ' gap-12' : 'grid-cols-1 gap-3'} mb-8 transition-all duration-500`}>
       {!isQualitative ? (
         <>
@@ -128,7 +128,7 @@ const SubjectCardContent: React.FC<{ s: SubjectStats, isFocused?: boolean, onExp
       </div>
     </div>
 
-    <div className={`${isFocused ? 'h-[400px]' : 'h-40'} w-full mt-auto relative`}>
+    <div className={`${isFocused ? 'h-[400px]' : 'h-60'} w-full mt-auto relative`}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={s.distribution} margin={{ top: 35, right: 10, left: -20, bottom: 25 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -200,7 +200,7 @@ const App: React.FC = () => {
       alert("Erro ao ler dados da aba.");
     } finally {
       setLoading(false);
-      setActiveTab('table'); 
+      setActiveTab('table');
     }
   };
 
@@ -255,7 +255,7 @@ const App: React.FC = () => {
       if (grade >= 3) return 'text-[#22c55e]'; // Verde puro
     }
     if (isFirstCycle) {
-       return grade <= 2 ? 'text-[#ef4444]' : 'text-[#22c55e]';
+      return grade <= 2 ? 'text-[#ef4444]' : 'text-[#22c55e]';
     }
     const isPositive = grade >= positiveThreshold;
     return isPositive ? 'text-[#22c55e]' : 'text-[#ef4444]';
@@ -267,17 +267,17 @@ const App: React.FC = () => {
       const count = grades.length;
       const avg = count > 0 ? grades.reduce((a, b) => a + b, 0) / count : 0;
       const variance = count > 0 ? grades.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / count : 0;
-      
+
       let countBelowThreshold = 0;
       if (isPreSchool) {
-          countBelowThreshold = grades.filter(g => g === 1).length; 
+        countBelowThreshold = grades.filter(g => g === 1).length;
       } else if (isFirstCycle) {
-          countBelowThreshold = grades.filter(g => g <= 2).length; 
+        countBelowThreshold = grades.filter(g => g <= 2).length;
       } else {
-          countBelowThreshold = grades.filter(g => g < positiveThreshold).length;
+        countBelowThreshold = grades.filter(g => g < positiveThreshold).length;
       }
       const countAboveThreshold = count - countBelowThreshold;
-      
+
       let distribution: GradeDistribution[];
       if (isPreSchool) {
         distribution = [
@@ -304,23 +304,23 @@ const App: React.FC = () => {
       const rawPercNeg = count > 0 ? (countBelowThreshold / count) * 100 : 0;
       const percNeg = Number(rawPercNeg.toFixed(1));
       let percPos = count > 0 ? Number(((countAboveThreshold / count) * 100).toFixed(1)) : 0;
-      
+
       if (isQualitative) {
         percPos = Number((100 - percNeg).toFixed(1));
       }
 
-      return { 
+      return {
         subject,
-        avg: Number(avg.toFixed(1)), 
-        stdDev: Number(Math.sqrt(variance).toFixed(1)), 
-        max: count > 0 ? Math.max(...grades) : 0, 
-        min: count > 0 ? Math.min(...grades) : 0, 
-        count, 
-        countBelowTen: countBelowThreshold, 
-        percentageBelowTen: percNeg, 
+        avg: Number(avg.toFixed(1)),
+        stdDev: Number(Math.sqrt(variance).toFixed(1)),
+        max: count > 0 ? Math.max(...grades) : 0,
+        min: count > 0 ? Math.min(...grades) : 0,
+        count,
+        countBelowTen: countBelowThreshold,
+        percentageBelowTen: percNeg,
         percentagePositive: percPos,
-        distribution, 
-        allGrades: grades 
+        distribution,
+        allGrades: grades
       };
     }) as SubjectStats[];
   }, [data, activeSubjects, positiveThreshold, isPreSchool, isFirstCycle, isSecondThirdCycle, isQualitative]);
@@ -346,7 +346,7 @@ const App: React.FC = () => {
   const bestSubject = useMemo(() => stats.filter(s => s.count > 0).sort((a, b) => b.avg - a.avg)[0] || null, [stats]);
   const lowestAvgSubject = useMemo(() => stats.filter(s => s.count > 0).sort((a, b) => a.avg - b.avg)[0] || null, [stats]);
   const highestStdDevSubject = useMemo(() => stats.filter(s => s.count > 0).sort((a, b) => b.stdDev - a.stdDev)[0] || null, [stats]);
-  
+
   const bestStudent = useMemo(() => {
     if (!data.length || !activeSubjects.length) return null;
     const studentAvgs = data.map(s => {
@@ -374,16 +374,16 @@ const App: React.FC = () => {
 
   const renderSuccessFailureChart = (isMaximized = false) => (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart layout="vertical" data={balanceData} margin={{ left: isMaximized ? 80 : 60, right: 30, top: 10, bottom: 10 }}>
+      <BarChart layout="vertical" data={balanceData} margin={{ left: isMaximized ? 80 : 10, right: 30, top: 10, bottom: 30 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.03)" />
         <XAxis type="number" hide />
-        <YAxis 
-          dataKey="subject" 
-          type="category" 
-          tick={{ fill: '#ffffff', fontSize: isMaximized ? 14 : 14.5, fontWeight: 'bold' }} 
-          width={isMaximized ? 120 : 70} 
-          axisLine={false} 
-          tickLine={false} 
+        <YAxis
+          dataKey="subject"
+          type="category"
+          tick={{ fill: '#ffffff', fontSize: isMaximized ? 14 : 14.5, fontWeight: 'bold' }}
+          width={isMaximized ? 120 : 80}
+          axisLine={false}
+          tickLine={false}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
         <Bar dataKey="positives" stackId="a" fill="#10b981">
@@ -450,8 +450,10 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-slate-950 px-6">
         <div className="glass-panel max-w-lg w-full p-10 rounded-[40px] border-2 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
           <div className="flex flex-col items-center mb-10">
-            <div className="w-20 h-20 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.5)] mb-6"><Orbit className="text-white" size={40} /></div>
-            <h1 className="text-4xl font-orbitron font-bold text-white uppercase tracking-tighter text-center">Nexus Link</h1>
+            <div className="w-auto max-w-sm bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.2)] mb-8 p-6">
+              <img src="/logo-aer.png" alt="Logótipo AER" className="h-28 w-auto object-contain" />
+            </div>
+            <h1 className="text-4xl font-bold text-white uppercase tracking-tighter text-center">Nexus Link</h1>
             <p className="font-bold uppercase tracking-widest text-[16px] mt-2 text-center">
               <span className="neon-text-cyan">Agrupamento de Escolas de</span> <span className="neon-text-redondo-magenta">Redondo</span>
             </p>
@@ -505,9 +507,9 @@ const App: React.FC = () => {
             <img src="/logo-aer.png" alt="Logótipo AER" className="h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-3xl font-orbitron font-bold neon-text-cyan uppercase leading-tight">
-              Agrupamento de Escolas de <span className="neon-text-redondo-magenta">Redondo</span> 
-              <span className="text-white text-base ml-2 block md:inline">| 2025/ 26 | 1.º Período</span>
+            <h1 className="text-2xl font-orbitron font-bold neon-text-cyan uppercase leading-tight">
+              Agrupamento de Escolas de <span className="neon-text-redondo-magenta">Redondo</span>
+              <div className="text-white text-base mt-1 block">2025/ 26 | 1.º Período</div>
             </h1>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Análise de Dados Google Cloud | {selectedSheet || 'Nenhuma folha selecionada'}</p>
           </div>
@@ -522,15 +524,15 @@ const App: React.FC = () => {
 
         {activeTab === 'home' && (
           <div className="space-y-10 animate-in fade-in duration-700">
-            <h2 className="text-3xl font-orbitron font-bold text-white uppercase tracking-tighter flex items-center gap-4">
+            <h2 className="text-2xl font-orbitron font-bold text-white uppercase tracking-tighter flex items-center gap-4">
               <Layers className="text-cyan-400" /> Turmas Detetadas por Ciclo
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              <CycleBox title="Pré-escolar" icon={<Baby size={20} />} color="pink" sheets={groupedSheets.preEscolar} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
-              <CycleBox title="1.º Ciclo" icon={<School size={20} />} color="emerald" sheets={groupedSheets.primeiroCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
-              <CycleBox title="2.º Ciclo" icon={<Library size={20} />} color="cyan" sheets={groupedSheets.segundoCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
-              <CycleBox title="3.º Ciclo" icon={<Atom size={20} />} color="purple" sheets={groupedSheets.terceiroCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
-              <CycleBox title="Secundário" icon={<GraduationCap size={20} />} color="yellow" sheets={groupedSheets.secundario} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
+            <div className="flex flex-col gap-6">
+              <CycleBox title="Pré-escolar" icon={<Baby size={24} />} color="pink" sheets={groupedSheets.preEscolar} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
+              <CycleBox title="1.º Ciclo" icon={<School size={24} />} color="emerald" sheets={groupedSheets.primeiroCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
+              <CycleBox title="2.º Ciclo" icon={<Library size={24} />} color="cyan" sheets={groupedSheets.segundoCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
+              <CycleBox title="3.º Ciclo" icon={<Atom size={24} />} color="purple" sheets={groupedSheets.terceiroCiclo} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
+              <CycleBox title="Secundário" icon={<GraduationCap size={24} />} color="yellow" sheets={groupedSheets.secundario} selectedSheet={selectedSheet} onSelect={handleLoadSheet} />
             </div>
           </div>
         )}
@@ -539,23 +541,23 @@ const App: React.FC = () => {
           <div className="space-y-10 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <StatCard title="Total de Alunos" value={data.length} icon={<Users />} color="cyan" />
-              
+
               {isQualitative ? (
                 <>
                   <StatCard title="Taxa de Sucesso Global" value={globalSuccessRate} icon={<CheckCircle />} color="purple" unit="%" />
-                  <StatCard 
-                    title="Aluno com maior n.º de Classificações Máximas" 
-                    value={topStudentByMaxGrades?.count || 0} 
-                    subtitle={topStudentByMaxGrades?.name || "N/A"} 
-                    icon={<Trophy />} 
-                    color="emerald" 
+                  <StatCard
+                    title="Aluno com maior n.º de Classificações Máximas"
+                    value={topStudentByMaxGrades?.count || 0}
+                    subtitle={topStudentByMaxGrades?.name || "N/A"}
+                    icon={<Trophy />}
+                    color="emerald"
                   />
-                  <StatCard 
-                    title="Disciplina com maior n.º de classificações máximas" 
-                    value={topSubjectByMaxGrades?.count || 0} 
-                    subtitle={topSubjectByMaxGrades?.subject || "N/A"} 
-                    icon={<Star />} 
-                    color="red" 
+                  <StatCard
+                    title="Disciplina com maior n.º de classificações máximas"
+                    value={topSubjectByMaxGrades?.count || 0}
+                    subtitle={topSubjectByMaxGrades?.subject || "N/A"}
+                    icon={<Star />}
+                    color="red"
                   />
                 </>
               ) : (
@@ -567,23 +569,23 @@ const App: React.FC = () => {
               )}
             </div>
             <div className="flex flex-col lg:flex-row gap-4 lg:justify-center items-start w-full">
-              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[30%]'} glass-panel p-6 rounded-3xl relative overflow-hidden h-[450px] shadow-2xl border-t border-white/5 shrink-0`}>
+              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[35%]'} glass-panel p-6 rounded-3xl relative overflow-hidden h-[450px] shadow-2xl border-t border-white/5`}>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xs font-orbitron font-bold uppercase text-white">Sucesso/Insucesso</h2>
                   <button onClick={() => setMaximizedDashboardChart('success-failure')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={16} /></button>
                 </div>
                 {renderSuccessFailureChart()}
               </div>
-              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[35%]'} glass-panel p-6 rounded-3xl h-[450px] shadow-2xl border-t border-white/5 relative shrink-0`}>
+              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[40%]'} glass-panel p-6 rounded-3xl h-[450px] shadow-2xl border-t border-white/5 relative`}>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xs font-orbitron font-bold uppercase text-white">Top 3 Negativas</h2>
                   <button onClick={() => setMaximizedDashboardChart('top-negative')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={16} /></button>
                 </div>
                 {renderTopNegativeChart()}
               </div>
-              
+
               {!isQualitative && (
-                <div className="w-full lg:w-[25%] flex flex-col gap-4 h-[450px] shrink-0">
+                <div className="w-full lg:w-[25%] flex flex-col gap-4 h-[450px]">
                   <div className="glass-panel p-4 rounded-3xl flex-1 shadow-2xl border-t border-white/5 relative flex flex-col min-h-0">
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="text-[10px] font-orbitron font-bold uppercase text-white truncate max-w-[80%]">Média Baixa</h2>
@@ -607,7 +609,7 @@ const App: React.FC = () => {
         {activeTab === 'subjects' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4 animate-in slide-in-from-bottom-6 duration-500">
             {stats.map((s, idx) => (
-              <div key={idx} className="glass-panel p-6 rounded-2xl border-l-4 border-cyan-500 group h-[350px] relative overflow-hidden shadow-2xl">
+              <div key={idx} className="glass-panel p-6 rounded-2xl border-l-4 border-cyan-500 group h-[420px] relative overflow-hidden shadow-2xl">
                 <SubjectCardContent s={s} onExpand={() => setHoveredSubject(idx)} isQualitative={isQualitative} />
               </div>
             ))}
@@ -619,25 +621,25 @@ const App: React.FC = () => {
             <div className="overflow-x-auto p-0 md:p-6">
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <thead>
-                  <tr className="text-slate-500 uppercase tracking-[0.2em] font-black">
-                    <th className="px-6 py-4 sticky left-0 z-30 bg-[#020617] min-w-[80px] text-center border-r border-slate-800">Nº</th>
-                    <th className="px-6 py-4 sticky left-[80px] z-30 bg-[#020617] min-w-[140px] border-r border-slate-800">Aluno</th>
-                    {activeSubjects.map((label, i) => <th key={i} className="px-6 py-4 text-center whitespace-nowrap">{label}</th>)}
+                  <tr className="text-slate-500 uppercase tracking-[0.2em] font-black text-xs">
+                    <th className="px-4 py-2 sticky left-0 top-0 z-50 bg-[#020617] min-w-[60px] text-center border-r border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.5)]">Nº</th>
+                    <th className="px-4 py-2 sticky left-[60px] top-0 z-50 bg-[#020617] min-w-[140px] border-r border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.5)]">Aluno</th>
+                    {activeSubjects.map((label, i) => <th key={i} className="px-4 py-2 sticky top-0 z-40 bg-[#020617] text-center whitespace-nowrap shadow-[0_2px_10px_rgba(0,0,0,0.5)]">{label}</th>)}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-sm">
                   {data.map((student) => (
                     <tr key={student.numero} className="bg-slate-900/40 rounded-xl hover:bg-cyan-500/10 transition-all group">
-                      <td className="px-6 py-4 text-cyan-400 font-mono font-bold sticky left-0 z-20 bg-[#020617] text-center border-r border-slate-800/50 transition-colors">
+                      <td className="px-4 py-2 text-cyan-400 font-mono font-bold sticky left-0 z-20 bg-[#020617] text-center border-r border-slate-800/50 transition-colors">
                         {student.numero}
                       </td>
-                      <td className="px-6 py-4 font-semibold text-slate-200 sticky left-[80px] z-20 bg-[#020617] border-r border-slate-800/50 whitespace-nowrap transition-colors">
+                      <td className="px-4 py-2 font-semibold text-slate-200 sticky left-[60px] z-20 bg-[#020617] border-r border-slate-800/50 whitespace-nowrap transition-colors">
                         {student.aluno}
                       </td>
                       {activeSubjects.map((subj, idx) => {
                         const grade = student.grades[subj] || 0;
                         return (
-                          <td key={idx} className={`px-6 py-4 font-mono font-bold text-center whitespace-nowrap grade-glow ${getCellColorClass(grade)}`}>
+                          <td key={idx} className={`px-4 py-2 font-mono font-bold text-center whitespace-nowrap grade-glow ${getCellColorClass(grade)}`}>
                             {formatGradeForTable(grade)}
                           </td>
                         );
@@ -688,24 +690,27 @@ const App: React.FC = () => {
 const CycleBox: React.FC<{ title: string, icon: React.ReactNode, color: string, sheets: SheetInfo[], selectedSheet: string, onSelect: (name: string) => void }> = ({ title, icon, color, sheets, selectedSheet, onSelect }) => {
   const c = color || 'emerald';
   return (
-    <div className={`glass-panel p-6 rounded-3xl border-l-4 border-${c}-500 shadow-xl flex flex-col h-full`}>
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`p-2 bg-${c}-500/20 text-${c}-400 rounded-lg`}>{icon}</div>
-        <h3 className="text-lg font-orbitron font-bold text-white uppercase tracking-wider">{title}</h3>
+    <div className={`glass-panel p-6 rounded-3xl border-l-4 border-${c}-500 shadow-xl flex flex-col md:flex-row gap-6 items-start md:items-center min-h-[140px]`}>
+      <div className="flex flex-col items-center justify-center md:w-[200px] shrink-0">
+        <div className={`flex items-center justify-center p-3 bg-${c}-500/20 text-${c}-400 rounded-2xl mb-2 w-16 h-16`}>{icon}</div>
+        <h3 className="text-lg font-orbitron font-bold text-white uppercase tracking-wider text-center">{title}</h3>
       </div>
-      {sheets.length > 0 ? (
-        <div className="grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] pr-1">
-          {sheets.map((s) => (
-            <button key={s.id} onClick={() => onSelect(s.name)} className={`p-3 rounded-xl font-bold uppercase tracking-widest text-[18px] text-left transition-all transform hover:translate-x-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] ${selectedSheet === s.name ? `bg-${c}-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]` : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400'}`}>
-              {s.name}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center border border-dashed border-slate-800 rounded-2xl p-4">
-          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em] text-center">Vazio</p>
-        </div>
-      )}
+
+      <div className="w-full flex-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
+        {sheets.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {sheets.map((s) => (
+              <button key={s.id} onClick={() => onSelect(s.name)} className={`p-3 rounded-xl font-bold uppercase tracking-widest text-sm text-center transition-all transform hover:translate-x-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] ${selectedSheet === s.name ? `bg-${c}-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]` : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400'}`}>
+                {s.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center border border-dashed border-slate-800 rounded-2xl p-6 h-full bg-slate-900/20">
+            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em]">Sem Turmas</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -10,35 +10,33 @@ lerna-debug.log*
 # Dependências
 node_modules
 
-# Next.js (ESSENCIAL para o seu projeto)
-.next
-out
-build
-
-# Variáveis de Ambiente e Segredos (MUITO IMPORTANTE)
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Build (Vite)
+dist
+dist-ssr
 *.local
 
-# Bloquear a chave JSON da Google
-# Isto garante que o ficheiro que você baixou não vai para a internet
+# Variáveis de Ambiente (CRÍTICO DE MANTER)
+.env
+.env.local
+.env.*.local
+
+# Proteção Google/Segredos
+# (Bloqueia todos os JSONs exceto os essenciais)
 *.json
 !package.json
 !package-lock.json
 !tsconfig.json
 !jsconfig.json
-!next.config.json
-!.vscode/extensions.json
+!vite.config.ts.timestamp*
+!.eslintrc.json
+!vercel.json
 
-# Editor directories and files
+# Editor
 .vscode/*
+!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
