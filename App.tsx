@@ -124,6 +124,34 @@ const CustomBarLabel = (props: any) => {
   );
 };
 
+const CustomAxisTick = ({ x, y, payload, isVertical = false, isMaximized = false }: any) => {
+  const words = payload.value.split(' ');
+  const lines = [];
+  let currentLine = '';
+
+  words.forEach((word: string) => {
+    if ((currentLine + word).length > 15) {
+      lines.push(currentLine.trim());
+      currentLine = word + ' ';
+    } else {
+      currentLine += word + ' ';
+    }
+  });
+  if (currentLine) lines.push(currentLine.trim());
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={isVertical ? 0 : (isMaximized ? 60 : 45)} dy={isVertical ? -((lines.length - 1) * 8) : 0} textAnchor={isVertical ? "end" : "middle"} fill="#ffffff" fontWeight="bold" fontSize={isMaximized ? 15 : 13}>
+        {lines.map((line, i) => (
+          <tspan key={i} x={0} dy={i === 0 ? 0 : 16} dx={isVertical ? -10 : 0}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+};
+
 const SubjectCardContent: React.FC<{ s: SubjectStats, isFocused?: boolean, onExpand?: () => void, isQualitative: boolean }> = ({ s, isFocused, onExpand, isQualitative }) => (
   <div className={`flex flex-col h-full transition-all duration-500 relative`}>
     {!isFocused && (
@@ -167,7 +195,7 @@ const SubjectCardContent: React.FC<{ s: SubjectStats, isFocused?: boolean, onExp
 
     <div className={`${isFocused ? 'h-[400px]' : 'h-60'} w-full mt-auto relative`}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={s.distribution} margin={{ top: 35, right: 10, left: -20, bottom: 25 }}>
+        <BarChart data={s.distribution} margin={{ top: 35, right: 10, left: 0, bottom: 25 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
           <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: isFocused ? 20 : 10 }} />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
@@ -322,20 +350,20 @@ const App: React.FC = () => {
       let distribution: GradeDistribution[];
       if (isPreSchool) {
         distribution = [
-          { range: 'Não Adq.', count: grades.filter(g => g === 1).length, chartValue: -grades.filter(g => g === 1).length, color: '#f43f5e' },
+          { range: 'Não Adq.', count: grades.filter(g => g === 1).length, chartValue: grades.filter(g => g === 1).length, color: '#f43f5e' },
           { range: 'Em Aq.', count: grades.filter(g => g === 2).length, chartValue: grades.filter(g => g === 2).length, color: '#f59e0b' },
           { range: 'Adquirido', count: grades.filter(g => g >= 3).length, chartValue: grades.filter(g => g >= 3).length, color: '#10b981' },
         ];
       } else if (isFirstCycle || isSecondThirdCycle) {
         distribution = [
-          { range: isFirstCycle ? 'Insuf.' : '1-2', count: grades.filter(g => g <= 2).length, chartValue: -grades.filter(g => g <= 2).length, color: '#f43f5e' },
+          { range: isFirstCycle ? 'Insuf.' : '1-2', count: grades.filter(g => g <= 2).length, chartValue: grades.filter(g => g <= 2).length, color: '#f43f5e' },
           { range: isFirstCycle ? 'Suf.' : '3', count: grades.filter(g => g === 3).length, chartValue: grades.filter(g => g === 3).length, color: '#10b981' },
           { range: isFirstCycle ? 'Bom' : '4', count: grades.filter(g => g === 4).length, chartValue: grades.filter(g => g === 4).length, color: '#22d3ee' },
           { range: isFirstCycle ? 'M.Bom' : '5', count: grades.filter(g => g === 5).length, chartValue: grades.filter(g => g === 5).length, color: '#d946ef' },
         ];
       } else {
         distribution = [
-          { range: '< 10', count: countBelowThreshold, chartValue: -countBelowThreshold, color: '#f43f5e' },
+          { range: '< 10', count: countBelowThreshold, chartValue: countBelowThreshold, color: '#f43f5e' },
           { range: '10-13', count: grades.filter(g => g >= 10 && g <= 13).length, chartValue: grades.filter(g => g >= 10 && g <= 13).length, color: '#f59e0b' },
           { range: '14-17', count: grades.filter(g => g >= 14 && g <= 17).length, chartValue: grades.filter(g => g >= 14 && g <= 17).length, color: '#22d3ee' },
           { range: '18-20', count: grades.filter(g => g >= 18).length, chartValue: grades.filter(g => g >= 18).length, color: '#d946ef' },
@@ -421,8 +449,8 @@ const App: React.FC = () => {
         <YAxis
           dataKey="subject"
           type="category"
-          tick={{ fill: '#ffffff', fontSize: isMaximized ? 14 : 14.5, fontWeight: 'bold' }}
-          width={isMaximized ? 120 : 80}
+          tick={<CustomAxisTick isVertical={true} />}
+          width={isMaximized ? 150 : 100}
           axisLine={false}
           tickLine={false}
           interval={0}
@@ -440,12 +468,12 @@ const App: React.FC = () => {
 
   const renderTopNegativeChart = (isMaximized = false) => (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={topNegativeSubjects} margin={{ top: isMaximized ? 60 : 35, right: 30, left: 20, bottom: 20 }}>
+      <BarChart data={topNegativeSubjects} margin={{ top: isMaximized ? 110 : 50, right: 30, left: 20, bottom: isMaximized ? 90 : 80 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-        <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#ffffff', fontSize: isMaximized ? 24 : 16, fontWeight: 'bold' }} />
+        <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={<CustomAxisTick isMaximized={isMaximized} />} interval={0} height={isMaximized ? 120 : 100} />
         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#ffffff', fontSize: isMaximized ? 18 : 14, fontWeight: 'bold' }} unit="%" />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
-        <Bar dataKey="percentageBelowTen" radius={[10, 10, 0, 0]}>
+        <Bar dataKey="percentageBelowTen" radius={[10, 10, 0, 0]} barSize={isMaximized ? 150 : undefined}>
           <LabelList content={<CustomBarLabel fontSize={isMaximized ? 24 : 16} valueKey="percentageBelowTen" />} />
           {topNegativeSubjects.map((entry, index) => (
             <Cell key={`cell-neg-${index}`} fill={entry.color} className="drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]" />
@@ -733,7 +761,7 @@ const App: React.FC = () => {
 
       {maximizedDashboardChart !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80 animate-in duration-300">
-          <div className="relative z-10 glass-panel p-12 rounded-[40px] border-2 shadow-2xl w-[70vw] h-[70vh] flex flex-col overflow-hidden"
+          <div className="relative z-10 glass-panel p-12 rounded-[40px] border-2 shadow-2xl w-[90vw] h-[90vh] flex flex-col overflow-hidden"
             style={{
               borderColor: maximizedDashboardChart === 'success-failure' ? '#10b981' :
                 maximizedDashboardChart === 'top-negative' ? '#ef4444' :
