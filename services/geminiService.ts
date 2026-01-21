@@ -1,11 +1,43 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { SheetData } from "../types";
 
 export const extractDataFromSheetsText = async (text: string, apiKey: string): Promise<SheetData> => {
-    const ai = new GoogleGenAI({ apiKey });
-    
-    const prompt = `
+  console.log("Gemini Service received API Key:", apiKey ? "YES (Starts with " + apiKey.substring(0, 4) + ")" : "NO/UNDEFINED");
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3-flash-preview",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: SchemaType.OBJECT,
+        properties: {
+          subjects: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+          },
+          students: {
+            type: SchemaType.ARRAY,
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                numero: { type: SchemaType.NUMBER },
+                aluno: { type: SchemaType.STRING },
+                scores: {
+                  type: SchemaType.ARRAY,
+                  items: { type: SchemaType.NUMBER }
+                }
+              },
+              required: ["numero", "aluno", "scores"]
+            }
+          }
+        },
+        required: ["subjects", "students"]
+      }
+    }
+  });
+
+  const prompt = `
       Analise o seguinte texto bruto de uma Google Sheet e extraia os dados estruturados.
       
       ESTRUTURA DA FOLHA:
@@ -47,60 +79,29 @@ export const extractDataFromSheetsText = async (text: string, apiKey: string): P
       ${text}
     `;
 
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              subjects: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              },
-              students: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    numero: { type: Type.INTEGER },
-                    aluno: { type: Type.STRING },
-                    scores: {
-                      type: Type.ARRAY,
-                      items: { type: Type.NUMBER }
-                    }
-                  },
-                  required: ["numero", "aluno", "scores"]
-                }
-              }
-            },
-            required: ["subjects", "students"]
-          }
-        }
-      });
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const data = JSON.parse(response.text());
 
-      const data = JSON.parse(response.text || '{"subjects":[], "students":[]}');
-      
-      const students = data.students.map((s: any) => {
-        const grades: Record<string, number> = {};
-        data.subjects.forEach((subj: string, index: number) => {
-          grades[subj] = s.scores[index] || 0;
-        });
-        return {
-          numero: s.numero,
-          aluno: s.aluno,
-          grades: grades
-        };
+    const students = data.students.map((s: any) => {
+      const grades: Record<string, number> = {};
+      data.subjects.forEach((subj: string, index: number) => {
+        grades[subj] = s.scores[index] || 0;
       });
-
       return {
-        subjects: data.subjects,
-        students: students
+        numero: s.numero,
+        aluno: s.aluno,
+        grades: grades
       };
-    } catch (e) {
-      console.error("Erro na extração Gemini:", e);
-      return { subjects: [], students: [] };
-    }
+    });
+
+    return {
+      subjects: data.subjects,
+      students: students
+    };
+  } catch (e: any) {
+    console.error("Erro na extração Gemini:", e);
+    throw e;
+  }
 };

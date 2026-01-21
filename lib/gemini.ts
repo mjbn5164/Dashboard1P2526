@@ -1,10 +1,36 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { SheetData } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenerativeAI(process.env.API_KEY || '');
 
 export async function analyzeGradesWithGemini(textData: string): Promise<SheetData> {
+  const model = ai.getGenerativeModel({
+    model: 'gemini-3-flash-preview',
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: SchemaType.OBJECT,
+        properties: {
+          subjects: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+          students: {
+            type: SchemaType.ARRAY,
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                numero: { type: SchemaType.NUMBER },
+                aluno: { type: SchemaType.STRING },
+                scores: { type: SchemaType.ARRAY, items: { type: SchemaType.NUMBER } }
+              },
+              required: ["numero", "aluno", "scores"]
+            }
+          }
+        },
+        required: ["subjects", "students"]
+      }
+    }
+  });
+
   const prompt = `
     Analise o seguinte texto bruto de uma Google Sheet e extraia os dados estruturados.
     
@@ -20,35 +46,10 @@ export async function analyzeGradesWithGemini(textData: string): Promise<SheetDa
     ${textData}
   `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          subjects: { type: Type.ARRAY, items: { type: Type.STRING } },
-          students: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                numero: { type: Type.INTEGER },
-                aluno: { type: Type.STRING },
-                scores: { type: Type.ARRAY, items: { type: Type.NUMBER } }
-              },
-              required: ["numero", "aluno", "scores"]
-            }
-          }
-        },
-        required: ["subjects", "students"]
-      }
-    }
-  });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const parsed = JSON.parse(response.text());
 
-  const parsed = JSON.parse(response.text || '{"subjects":[], "students":[]}');
-  
   const students = parsed.students.map((s: any) => {
     const grades: Record<string, number> = {};
     parsed.subjects.forEach((subj: string, index: number) => {

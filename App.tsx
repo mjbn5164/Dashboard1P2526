@@ -37,8 +37,45 @@ const formatDecimal = (val: number | string): string => {
   if (isNaN(num)) return String(val);
   return num.toLocaleString('pt-PT', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 1
+    maximumFractionDigits: 1,
   });
+};
+
+const interpolateColor = (color1: string, color2: string, factor: number) => {
+  const result = color1.slice(1).match(/.{2}/g)!.map((hex, i) => {
+    const v1 = parseInt(hex, 16);
+    const v2 = parseInt(color2.slice(1).match(/.{2}/g)![i], 16);
+    const val = Math.round(v1 + (v2 - v1) * factor);
+    return val.toString(16).padStart(2, '0');
+  });
+  return `#${result.join('')}`;
+};
+
+const getGaugeColor = (value: number, max: number) => {
+  const threshold = max > 5 ? 10 : 3;
+
+  if (value < threshold) {
+    // 0 to threshold: Red to Orange
+    const factor = value / threshold;
+    return interpolateColor('#ef4444', '#f97316', factor);
+  } else {
+    // threshold to max: Orange to Yellow to Green
+    // Split the positive range into two halves
+    const range = max - threshold;
+    const midpoint = threshold + (range / 2);
+
+    if (value < midpoint) {
+      // threshold to midpoint: Orange to Yellow
+      // Normalize value within this sub-range to 0-1
+      const factor = (value - threshold) / (midpoint - threshold);
+      return interpolateColor('#f97316', '#eab308', factor);
+    } else {
+      // midpoint to max: Yellow to Green
+      // Normalize value within this sub-range to 0-1
+      const factor = (value - midpoint) / (max - midpoint);
+      return interpolateColor('#eab308', '#22c55e', factor);
+    }
+  }
 };
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -98,7 +135,7 @@ const SubjectCardContent: React.FC<{ s: SubjectStats, isFocused?: boolean, onExp
       </button>
     )}
 
-    <div className="flex justify-between items-start mb-6">
+    <div className={`flex justify-between items-start mb-6 ${!isFocused ? 'pr-12' : ''}`}>
       <h4 className={`font-bold font-orbitron text-white uppercase tracking-tight transition-all duration-500 ${isFocused ? 'neon-text-cyan text-5xl' : 'text-xl'}`}>{s.subject}</h4>
     </div>
 
@@ -197,7 +234,11 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      alert("Erro ao ler dados da aba.");
+      if (err.message?.includes('429') || err.message?.includes('Quota') || err.toString().includes('429')) {
+        alert("⚠️ Limite de utilização da IA atingido. Por favor aguarde um momento ou tente amanhã.");
+      } else {
+        alert(`Erro ao ler dados da aba: ${err.message || 'Erro desconhecido'}`);
+      }
     } finally {
       setLoading(false);
       setActiveTab('table');
@@ -384,13 +425,14 @@ const App: React.FC = () => {
           width={isMaximized ? 120 : 80}
           axisLine={false}
           tickLine={false}
+          interval={0}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
         <Bar dataKey="positives" stackId="a" fill="#10b981">
-          <LabelList dataKey="positives" position="center" fill="#fff" fontSize={isMaximized ? 14 : 13.5} fontWeight="900" formatter={(val: number) => val === 0 ? '' : val} />
+          <LabelList dataKey="positives" position="center" fill="#fff" fontSize={isMaximized ? 24 : 16} fontWeight="900" formatter={(val: number) => val === 0 ? '' : val} />
         </Bar>
         <Bar dataKey="negatives" stackId="a" fill="#f43f5e">
-          <LabelList dataKey="negatives" position="center" fill="#fff" fontSize={isMaximized ? 14 : 13.5} fontWeight="900" formatter={(val: number) => val === 0 ? '' : val} />
+          <LabelList dataKey="negatives" position="center" fill="#fff" fontSize={isMaximized ? 24 : 16} fontWeight="900" formatter={(val: number) => val === 0 ? '' : val} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -413,13 +455,22 @@ const App: React.FC = () => {
     </ResponsiveContainer>
   );
 
-  const renderGauge = (value: number, max: number, color: string, label: string, isMaximized = false) => {
+  const renderGauge = (value: number, max: number, color: string, label: string, isMaximized = false, useGradient = false) => {
     const gaugeData = [{ name: 'Value', value: value, color: color }, { name: 'Remaining', value: Math.max(0, max - value), color: 'rgba(255,255,255,0.05)' }];
     return (
       <div className="flex flex-col items-center justify-center h-full relative">
         <div className={`w-full ${isMaximized ? 'h-full' : 'h-40'}`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              {useGradient && (
+                <defs>
+                  <linearGradient id="gaugeTargetGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#ef4444" />
+                    <stop offset="50%" stopColor="#eab308" />
+                    <stop offset="100%" stopColor="#22c55e" />
+                  </linearGradient>
+                </defs>
+              )}
               <Pie data={gaugeData} cx="50%" cy="70%" startAngle={180} endAngle={0} innerRadius={isMaximized ? "60%" : "50%"} outerRadius={isMaximized ? "90%" : "80%"} paddingAngle={0} dataKey="value" stroke="none">
                 {gaugeData.map((entry, index) => <PieCell key={`cell-${index}`} fill={entry.color} />)}
               </Pie>
@@ -428,7 +479,7 @@ const App: React.FC = () => {
           </ResponsiveContainer>
         </div>
         <div className={`absolute bottom-[20%] text-center`}>
-          <div className={`font-orbitron font-black ${isMaximized ? 'text-6xl mb-2' : 'text-xl'}`} style={{ color }}>{formatDecimal(value)}</div>
+          <div className={`font-orbitron font-black ${isMaximized ? 'text-5xl mb-2' : 'text-lg'}`} style={{ color }}>{formatDecimal(value)}</div>
           <div className={`font-bold uppercase tracking-widest text-slate-400 ${isMaximized ? 'text-lg' : 'text-[8px]'}`}>{label}</div>
         </div>
       </div>
@@ -557,26 +608,26 @@ const App: React.FC = () => {
                     value={topSubjectByMaxGrades?.count || 0}
                     subtitle={topSubjectByMaxGrades?.subject || "N/A"}
                     icon={<Star />}
-                    color="red"
+                    color="orange"
                   />
                 </>
               ) : (
                 <>
                   <StatCard title="Média Global" value={stats.filter(s => s.count > 0).reduce((a, b) => a + b.avg, 0) / (stats.filter(s => s.count > 0).length || 1)} icon={<TrendingUp />} color="purple" />
                   <StatCard title="Aluno com Média Mais Alta" value={bestStudent?.avg || 0} subtitle={bestStudent?.name || "N/A"} icon={<Trophy />} color="emerald" />
-                  <StatCard title="Disciplina Com Média Mais Alta" value={bestSubject?.avg || 0} subtitle={bestSubject?.subject || "N/A"} icon={<Star />} color="red" />
+                  <StatCard title="Disciplina Com Média Mais Alta" value={bestSubject?.avg || 0} subtitle={bestSubject?.subject || "N/A"} icon={<Star />} color="orange" />
                 </>
               )}
             </div>
             <div className="flex flex-col lg:flex-row gap-4 lg:justify-center items-start w-full">
-              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[35%]'} glass-panel p-6 rounded-3xl relative overflow-hidden h-[450px] shadow-2xl border-t border-white/5`}>
+              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[35%]'} glass-panel p-6 rounded-3xl relative overflow-hidden h-[450px] shadow-2xl !border-2 !border-emerald-500`}>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xs font-orbitron font-bold uppercase text-white">Sucesso/Insucesso</h2>
                   <button onClick={() => setMaximizedDashboardChart('success-failure')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={16} /></button>
                 </div>
                 {renderSuccessFailureChart()}
               </div>
-              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[40%]'} glass-panel p-6 rounded-3xl h-[450px] shadow-2xl border-t border-white/5 relative`}>
+              <div className={`w-full ${isQualitative ? 'lg:w-1/2' : 'lg:w-[40%]'} glass-panel p-6 rounded-3xl h-[450px] shadow-2xl !border-2 !border-red-500 relative`}>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xs font-orbitron font-bold uppercase text-white">Top 3 Negativas</h2>
                   <button onClick={() => setMaximizedDashboardChart('top-negative')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={16} /></button>
@@ -586,14 +637,28 @@ const App: React.FC = () => {
 
               {!isQualitative && (
                 <div className="w-full lg:w-[25%] flex flex-col gap-4 h-[450px]">
-                  <div className="glass-panel p-4 rounded-3xl flex-1 shadow-2xl border-t border-white/5 relative flex flex-col min-h-0">
+                  <div className="glass-panel p-4 rounded-3xl flex-1 shadow-2xl relative flex flex-col min-h-0 transition-colors duration-500"
+                    style={{
+                      borderColor: lowestAvgSubject ? getGaugeColor(lowestAvgSubject.avg, maxGradeValue) : '#ef4444',
+                      borderWidth: '2px'
+                    }}
+                  >
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="text-[10px] font-orbitron font-bold uppercase text-white truncate max-w-[80%]">Média Baixa</h2>
                       <button onClick={() => setMaximizedDashboardChart('lowest-avg-gauge')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={14} /></button>
                     </div>
-                    <div className="flex-1 min-h-0">{lowestAvgSubject && renderGauge(lowestAvgSubject.avg, (isSecondThirdCycle) ? 5 : 20, '#f43f5e', 'Média')}</div>
+                    <div className="flex-1 min-h-0">
+                      {lowestAvgSubject && renderGauge(
+                        lowestAvgSubject.avg,
+                        maxGradeValue,
+                        getGaugeColor(lowestAvgSubject.avg, maxGradeValue),
+                        'Média',
+                        false,
+                        false
+                      )}
+                    </div>
                   </div>
-                  <div className="glass-panel p-4 rounded-3xl flex-1 shadow-2xl border-t border-white/5 relative flex flex-col min-h-0">
+                  <div className="glass-panel p-4 rounded-3xl flex-1 shadow-2xl !border-2 !border-purple-500 relative flex flex-col min-h-0">
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="text-[10px] font-orbitron font-bold uppercase text-white truncate max-w-[80%]">Maior Desvio</h2>
                       <button onClick={() => setMaximizedDashboardChart('highest-stddev-gauge')} className="p-1 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"><Maximize size={14} /></button>
@@ -609,7 +674,9 @@ const App: React.FC = () => {
         {activeTab === 'subjects' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4 animate-in slide-in-from-bottom-6 duration-500">
             {stats.map((s, idx) => (
-              <div key={idx} className="glass-panel p-6 rounded-2xl border-l-4 border-cyan-500 group h-[420px] relative overflow-hidden shadow-2xl">
+              <div key={idx} className="glass-panel p-6 rounded-2xl border-2 group h-[420px] relative overflow-hidden shadow-2xl"
+                style={{ borderColor: '#22d3ee' }}
+              >
                 <SubjectCardContent s={s} onExpand={() => setHoveredSubject(idx)} isQualitative={isQualitative} />
               </div>
             ))}
@@ -655,7 +722,9 @@ const App: React.FC = () => {
 
       {hoveredSubject !== null && activeTab === 'subjects' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80 animate-in duration-300">
-          <div className="relative z-10 glass-panel p-16 rounded-[40px] border-2 border-cyan-500/50 shadow-[0_0_120px_rgba(34,211,238,0.4)] w-[1000px] max-w-full">
+          <div className="relative z-10 glass-panel p-16 rounded-[40px] !border-2 shadow-[0_0_120px_rgba(34,211,238,0.4)] w-[1000px] max-w-full"
+            style={{ borderColor: '#22d3ee' }}
+          >
             <SubjectCardContent s={stats[hoveredSubject]} isFocused isQualitative={isQualitative} />
             <button onClick={() => setHoveredSubject(null)} className="absolute top-8 right-8 text-slate-400 hover:text-white transition-all hover:scale-110"><X size={32} /></button>
           </div>
@@ -664,7 +733,14 @@ const App: React.FC = () => {
 
       {maximizedDashboardChart !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80 animate-in duration-300">
-          <div className="relative z-10 glass-panel p-12 rounded-[40px] border-2 border-white/20 shadow-2xl w-[70vw] h-[70vh] flex flex-col overflow-hidden">
+          <div className="relative z-10 glass-panel p-12 rounded-[40px] border-2 shadow-2xl w-[70vw] h-[70vh] flex flex-col overflow-hidden"
+            style={{
+              borderColor: maximizedDashboardChart === 'success-failure' ? '#10b981' :
+                maximizedDashboardChart === 'top-negative' ? '#ef4444' :
+                  maximizedDashboardChart === 'lowest-avg-gauge' ? (lowestAvgSubject ? getGaugeColor(lowestAvgSubject.avg, maxGradeValue) : '#f43f5e') :
+                    maximizedDashboardChart === 'highest-stddev-gauge' ? '#d946ef' : '#ffffff'
+            }}
+          >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-orbitron font-bold text-white uppercase tracking-widest">
                 {maximizedDashboardChart === 'success-failure' && 'Sucesso/Insucesso'}
@@ -677,7 +753,13 @@ const App: React.FC = () => {
             <div className="flex-1 min-h-0">
               {maximizedDashboardChart === 'success-failure' && renderSuccessFailureChart(true)}
               {maximizedDashboardChart === 'top-negative' && renderTopNegativeChart(true)}
-              {maximizedDashboardChart === 'lowest-avg-gauge' && lowestAvgSubject && renderGauge(lowestAvgSubject.avg, (isSecondThirdCycle) ? 5 : 20, '#f43f5e', 'Média', true)}
+              {maximizedDashboardChart === 'lowest-avg-gauge' && lowestAvgSubject && renderGauge(
+                lowestAvgSubject.avg,
+                maxGradeValue,
+                getGaugeColor(lowestAvgSubject.avg, maxGradeValue),
+                'Média',
+                true
+              )}
               {maximizedDashboardChart === 'highest-stddev-gauge' && highestStdDevSubject && renderGauge(highestStdDevSubject.stdDev, (isSecondThirdCycle) ? 2.5 : 10, '#d946ef', 'Desvio Padrão', true)}
             </div>
           </div>
@@ -687,26 +769,107 @@ const App: React.FC = () => {
   );
 };
 
+const colorConfig: Record<string, { border: string, bg: string, text: string, bgHover: string, textHover: string, shadow: string, iconBg: string, neon: string, boxGradient: string }> = {
+  emerald: {
+    border: '!border-emerald-500',
+    bg: 'bg-emerald-500',
+    text: 'text-emerald-400',
+    bgHover: 'group-hover:bg-emerald-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(16,185,129,0.5)]',
+    iconBg: 'bg-emerald-500/20',
+    neon: 'neon-text-emerald',
+    boxGradient: 'from-emerald-500/10 to-transparent'
+  },
+  cyan: {
+    border: '!border-cyan-500',
+    bg: 'bg-cyan-500',
+    text: 'text-cyan-400',
+    bgHover: 'group-hover:bg-cyan-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(34,211,238,0.5)]',
+    iconBg: 'bg-cyan-500/20',
+    neon: 'neon-text-cyan',
+    boxGradient: 'from-cyan-500/10 to-transparent'
+  },
+  purple: {
+    border: '!border-purple-500',
+    bg: 'bg-purple-500',
+    text: 'text-purple-400',
+    bgHover: 'group-hover:bg-purple-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(168,85,247,0.5)]',
+    iconBg: 'bg-purple-500/20',
+    neon: 'neon-text-purple',
+    boxGradient: 'from-purple-500/10 to-transparent'
+  },
+  yellow: {
+    border: '!border-yellow-500',
+    bg: 'bg-yellow-500',
+    text: 'text-yellow-400',
+    bgHover: 'group-hover:bg-yellow-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(234,179,8,0.5)]',
+    iconBg: 'bg-yellow-500/20',
+    neon: 'neon-text-yellow',
+    boxGradient: 'from-yellow-500/10 to-transparent'
+  },
+  orange: {
+    border: '!border-orange-500',
+    bg: 'bg-orange-500',
+    text: 'text-orange-400',
+    bgHover: 'group-hover:bg-orange-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(249,115,22,0.5)]',
+    iconBg: 'bg-orange-500/20',
+    neon: 'neon-text-orange',
+    boxGradient: 'from-orange-500/10 to-transparent'
+  },
+  pink: {
+    border: '!border-pink-500',
+    bg: 'bg-pink-500',
+    text: 'text-pink-400',
+    bgHover: 'group-hover:bg-pink-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(236,72,153,0.5)]',
+    iconBg: 'bg-pink-500/20',
+    neon: 'neon-text-magenta',
+    boxGradient: 'from-pink-500/10 to-transparent'
+  },
+  // Fallback for default or others
+  default: {
+    border: 'border-emerald-500',
+    bg: 'bg-emerald-500',
+    text: 'text-emerald-400',
+    bgHover: 'group-hover:bg-emerald-500',
+    textHover: 'group-hover:text-white',
+    shadow: 'shadow-[0_0_20px_rgba(16,185,129,0.5)]',
+    iconBg: 'bg-emerald-500/20',
+    neon: 'neon-text-emerald',
+    boxGradient: 'from-emerald-500/10 to-transparent'
+  }
+};
+
 const CycleBox: React.FC<{ title: string, icon: React.ReactNode, color: string, sheets: SheetInfo[], selectedSheet: string, onSelect: (name: string) => void }> = ({ title, icon, color, sheets, selectedSheet, onSelect }) => {
-  const c = color || 'emerald';
+  const styles = colorConfig[color] || colorConfig.default;
   return (
-    <div className={`glass-panel p-6 rounded-3xl border-l-4 border-${c}-500 shadow-xl flex flex-col md:flex-row gap-6 items-start md:items-center min-h-[140px]`}>
-      <div className="flex flex-col items-center justify-center md:w-[200px] shrink-0">
-        <div className={`flex items-center justify-center p-3 bg-${c}-500/20 text-${c}-400 rounded-2xl mb-2 w-16 h-16`}>{icon}</div>
+    <div className={`glass-panel p-5 rounded-3xl !border-l-[16px] bg-gradient-to-r ${styles.boxGradient} ${styles.border} shadow-xl flex flex-col md:flex-row gap-5 items-start md:items-center min-h-[120px] hover:!border-l-[20px] transition-all duration-300`}>
+      <div className="flex flex-col items-center justify-center md:w-[180px] shrink-0">
+        <div className={`flex items-center justify-center p-2.5 ${styles.iconBg} ${styles.text} rounded-2xl mb-2 w-14 h-14`}>{icon}</div>
         <h3 className="text-lg font-orbitron font-bold text-white uppercase tracking-wider text-center">{title}</h3>
       </div>
 
-      <div className="w-full flex-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
+      <div className="w-full flex-1 border-t md:border-t-0 md:border-l border-slate-700/50 pt-4 md:pt-0 md:pl-5">
         {sheets.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {sheets.map((s) => (
-              <button key={s.id} onClick={() => onSelect(s.name)} className={`p-3 rounded-xl font-bold uppercase tracking-widest text-sm text-center transition-all transform hover:translate-x-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] ${selectedSheet === s.name ? `bg-${c}-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]` : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400'}`}>
+              <button key={s.id} onClick={() => onSelect(s.name)} className={`p-3 rounded-xl font-bold uppercase tracking-widest text-xs text-center transition-all transform hover:translate-x-1 hover:shadow-lg hover:scale-105 ${selectedSheet === s.name ? `${styles.bg} text-white shadow-lg ring-2 ring-white/20` : 'bg-slate-800/40 hover:bg-slate-700 text-slate-300'}`}>
                 {s.name}
               </button>
             ))}
           </div>
         ) : (
-          <div className="flex items-center justify-center border border-dashed border-slate-800 rounded-2xl p-6 h-full bg-slate-900/20">
+          <div className="flex items-center justify-center border border-dashed border-slate-800 rounded-2xl p-4 h-full bg-slate-900/20">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em]">Sem Turmas</p>
           </div>
         )}
@@ -715,19 +878,22 @@ const CycleBox: React.FC<{ title: string, icon: React.ReactNode, color: string, 
   );
 };
 
-const StatCard: React.FC<{ title: string, value: string | number, icon: React.ReactNode, color: string, subtitle?: string, unit?: string }> = ({ title, value, icon, color, subtitle, unit }) => (
-  <div className={`glass-panel p-6 rounded-3xl border-l-4 border-${color}-500 group transition-all shadow-lg hover:shadow-2xl hover:scale-105`}>
-    <div className="flex items-center gap-4 mb-2">
-      <div className={`p-2 bg-${color}-500/10 rounded-lg text-${color}-400 group-hover:bg-${color}-500 group-hover:text-white transition-all`}>{icon}</div>
-      <p className="text-slate-500 text-[12px] font-bold uppercase tracking-widest">{title}</p>
+const StatCard: React.FC<{ title: string, value: string | number, icon: React.ReactNode, color: string, subtitle?: string, unit?: string }> = ({ title, value, icon, color, subtitle, unit }) => {
+  const styles = colorConfig[color] || colorConfig.default;
+  return (
+    <div className={`glass-panel p-6 rounded-3xl border-l-4 ${styles.border} group transition-all shadow-lg hover:shadow-2xl hover:scale-105`}>
+      <div className="flex items-center gap-4 mb-2">
+        <div className={`p-2 ${styles.iconBg} rounded-lg ${styles.text} ${styles.bgHover} ${styles.textHover} transition-all`}>{icon}</div>
+        <p className="text-slate-500 text-[12px] font-bold uppercase tracking-widest">{title}</p>
+      </div>
+      <div className="flex flex-col">
+        <h3 className={`text-3xl font-orbitron font-black ${styles.neon}`}>
+          {typeof value === 'number' ? formatDecimal(value) : value}{unit || ''}
+        </h3>
+        {subtitle && <p className="text-[12px] font-bold text-slate-400 mt-1 uppercase truncate group-hover:text-white">{subtitle}</p>}
+      </div>
     </div>
-    <div className="flex flex-col">
-      <h3 className={`text-3xl font-orbitron font-black neon-text-${color}`}>
-        {typeof value === 'number' ? formatDecimal(value) : value}{unit || ''}
-      </h3>
-      {subtitle && <p className="text-[12px] font-bold text-slate-400 mt-1 uppercase truncate group-hover:text-white">{subtitle}</p>}
-    </div>
-  </div>
-);
+  );
+};
 
 export default App;
