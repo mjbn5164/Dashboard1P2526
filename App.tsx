@@ -502,7 +502,7 @@ const App: React.FC = () => {
         <div className="glass-panel max-w-lg w-full p-10 rounded-[40px] border-2 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
           <div className="flex flex-col items-center mb-10">
             <div className="w-auto max-w-sm bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.2)] mb-8 p-6">
-              <img src="/logo-aer.png" alt="Logótipo AER" className="h-28 w-auto object-contain" />
+              <img src="/logo-aer.png" alt="Logótipo AER" className="h-28 w-auto object-contain" style={{ clipPath: 'inset(4% 0 0 0)' }} />
             </div>
             <h1 className="text-4xl font-bold text-white uppercase tracking-tighter text-center">Nexus Link</h1>
             <p className="font-bold uppercase tracking-widest text-[16px] mt-2 text-center">
@@ -555,7 +555,7 @@ const App: React.FC = () => {
       <main className="flex-1 p-4 md:p-10 overflow-y-auto relative">
         <header className="mb-10 flex items-center gap-6">
           <div className="bg-white p-2 rounded-2xl h-20 md:h-24 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-            <img src="/logo-aer.png" alt="Logótipo AER" className="h-full object-contain" />
+            <img src="/logo-aer.png" alt="Logótipo AER" className="h-full object-contain" style={{ clipPath: 'inset(4% 0 0 0)' }} />
           </div>
           <div>
             <h1 className="text-2xl font-orbitron font-bold neon-text-cyan uppercase leading-tight">
