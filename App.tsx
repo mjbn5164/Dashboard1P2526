@@ -30,7 +30,8 @@ import {
 import { StudentData, SubjectStats, GradeDistribution, SheetInfo } from './types';
 import { extractDataFromSheetsText } from './services/geminiService';
 
-const MASTER_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const SHEETS_API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const formatDecimal = (val: number | string): string => {
   const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val;
@@ -233,7 +234,7 @@ const App: React.FC = () => {
     if (!sheetId || sheetId.trim() === "") return;
     setLoading(true);
     try {
-      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?key=${MASTER_API_KEY}`);
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?key=${SHEETS_API_KEY}`);
       if (!response.ok) throw new Error("Não foi possível aceder à folha.");
       const metadata = await response.json();
       const sheets = metadata.sheets.map((s: any) => ({ name: s.properties.title, id: s.properties.sheetId }));
@@ -251,12 +252,12 @@ const App: React.FC = () => {
     setLoading(true);
     setSelectedSheet(sheetName);
     try {
-      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/'${sheetName}'?key=${MASTER_API_KEY}`);
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/'${sheetName}'?key=${SHEETS_API_KEY}`);
       const result = await response.json();
       const rows = result.values;
       if (rows && rows.length > 0) {
         const textData = rows.map((r: any) => r.join(', ')).join('\n');
-        const extracted = await extractDataFromSheetsText(textData, MASTER_API_KEY);
+        const extracted = await extractDataFromSheetsText(textData, GEMINI_API_KEY);
         setActiveSubjects(extracted.subjects);
         setData(extracted.students);
       }
