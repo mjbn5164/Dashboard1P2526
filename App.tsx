@@ -589,7 +589,7 @@ const App: React.FC = () => {
           <div>
             <h1 className="text-2xl font-orbitron font-bold neon-text-cyan uppercase leading-tight">
               Agrupamento de Escolas de <span className="neon-text-redondo-magenta">Redondo</span>
-              <div className="text-white text-base mt-1 block">2025/ 26 | 1.º Período</div>
+              <div className="text-white text-base mt-1 block">2025/ 26 | 3.º Período</div>
             </h1>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Análise de Dados Google Cloud | {selectedSheet || 'Nenhuma folha selecionada'}</p>
           </div>
